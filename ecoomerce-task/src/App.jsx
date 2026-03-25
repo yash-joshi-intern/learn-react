@@ -1,143 +1,115 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
+
+const LIMIT = 10;
 
 function App() {
-
-  const [product, setProducts] = useState([]);
-  const [search , setSearch] = useState("");
-
-  const [categories, setCategories] = useState([]);
-  const [category, setCategory] = useState("all")
-
-  const [sort, setSort] = useState("");
+  const [products, setProducts] = useState([]);
 
   const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0) //pagination formula skip = (page - 1) * LIMIT
 
-  const start = (page - 1) * 10;
-  const end = start + 10;
+  const totalPages = Math.ceil(total/LIMIT);
 
-  const paginatedProduct = product.slice(start,end) //updated product have to render this in the rendering
-  const totalPages = Math.ceil(product.length / 10)
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("")
 
+  const [categories, setCategories] = useState([]);
+  const [category, setCategory] = useState("all");
 
-  function sortProduct(products, sort) {
-    let sorted = [...products];
-
-    if(sort === "price-asc"){
-      sorted.sort((a,b) => a.price - b.price)
-    }else if(sort === "price-desc"){
-      sorted.sort((a, b) => b.price - a.price)
-    }
-    return sorted
-  }
-
-  useEffect(() => {
-    async function fetchCatetory() {
-      const res = await fetch("https://dummyjson.com/products/category-list")
-      const data = await res.json();
-
-      setCategories(data)
-    }
-
-    fetchCatetory()
+  useEffect(()=> {
+    fetch("https://dummyjson.com/products/category-list")
+      .then(res => res.json())
+      .then(data => setCategories(data))
   },[])
 
-  useEffect(()=>{
-    async function fetchProduct() {
-      let url = ""
+  useEffect(() => {
+    async function fetchProducts() {
 
-      // const url = search 
-      //     ? `https://dummyjson.com/products/search?q=${search}`
-      //     : `https://dummyjson.com/products?limit=10`
+      const skip = (page-1)*LIMIT
 
-      if(search){
-        url = `https://dummyjson.com/products/search?q=${search}`
-      }else if(category != "all"){
-         url = `https://dummyjson.com/products/category/${category}`;
-      }else{
-        url = `https://dummyjson.com/products`;
+      const sortParam = sort ? `&sortBy=price&order=${sort}` : ""
+
+      let url;
+
+      if (search && category !== "all") {
+        url = `https://dummyjson.com/products/category/${category}?limit=0${sortParam}`;
+      } else if (search) {
+        url = `https://dummyjson.com/products/search?q=${search}&limit=${LIMIT}&skip=${skip}${sortParam}`;
+      } else if (category !== "all") {
+        url = `https://dummyjson.com/products/category/${category}?limit=${LIMIT}&skip=${skip}${sortParam}`;
+      } else {
+        url = `https://dummyjson.com/products?limit=${LIMIT}&skip=${skip}${sortParam}`;
       }
 
-      const res = await fetch(url);
-      const data = await res.json();
-      console.log(data)
+      const res = await fetch(url)
+      const data = await res.json()
 
       let result = data.products
 
-      if(search && category != "all"){
-        result = result.filter((e)=> e.category === category)
+      if ( search && category != "all"){
+        result = result.filter( prod => prod.title.toLowerCase().includes(search.toLowerCase()));
+        setTotal(result.length)
+        setProducts(result.slice(skip, skip + LIMIT))
+      }else{
+        setTotal(data.total)
+        setProducts(result)
       }
-
-      result = sortProduct(result, sort)
-
-      console.log(result)
-      setProducts(result)
     }
 
-    fetchProduct()
-  },[search,category,sort])
+    fetchProducts();
+  }, [page,search, sort , category]);
 
-  return(
+  return (
     <div>
-      <h1>Products Listing</h1>
+      <h1>Product Explorer</h1>
 
       <input
-        type="text"
-        placeholder="Search..."
+        type="text" placeholder="Search..."
         value={search}
-        onChange={(e)=> {
+        onChange={(e) => {
           setSearch(e.target.value)
           setPage(1)
         }}
-      />
+      ></input>
 
-      <select 
-        value={category}
-        onChange={(e) => {
-          setCategory(e.target.value)
-          setPage(1)
-        }}
-      >
-        <option value="all">All</option>
-        {
-          categories && categories.map((cat) => (
-            <option key={cat} value={cat} >{cat}</option>
-          ))
-        }
+      <select value={category} onChange={(e) => {setCategory(e.target.value) ; setPage(1)}}>
+        <option value="all"> All </option>
+        {categories && categories.map(cat =>(<option key={cat} value={cat}> {cat} </option>))}
       </select>
 
       <select value={sort} onChange={(e) => {
         setSort(e.target.value)
         setPage(1)
       }}>
+
         <option value=""> Default </option>
-        <option value="price-asc"> Price Low → High </option>
-        <option value="price-desc"> Price High → Low </option>
+        <option value="asc"> Price Low - High</option>
+        <option value="desc"> Price High - Low </option>
+
       </select>
 
-      {paginatedProduct && paginatedProduct.map((p) => (
+      {products && products.map(p => (
         <div key={p.id}>
-          <h3>{p.title}</h3>
-          <p> Category : {p.category}</p>
-          <p>Price: {p.price}</p>
+          <img src={p.thumbnail} alt={p.title} width="100" />
+          <h4>{p.title}</h4>
+          <p>Category : {p.category} | Price : {p.price} | Rating : {p.rating} | Stock: {p.stock}</p>
         </div>
       ))}
 
       <button
-        onClick={() => setPage((p)=> p - 1)}
-        disabled={page===1}
+        disabled={page===1} onClick={() => setPage(p => p - 1)}
       >
         Prev
       </button>
-
+      <span> Page : {page}/{totalPages} </span>
       <button
-        onClick={() => setPage((p)=> p + 1)}
-        disabled={page===totalPages}
+        disabled={page===totalPages} onClick={() => setPage( p => p + 1)}
       >
         Next
       </button>
     </div>
-  )
 
+  );
 }
 
-export default App
+export default App;
