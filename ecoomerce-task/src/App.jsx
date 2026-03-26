@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import { CartProvider } from "./context/CartContext";
+import Header from "./components/Header";
+import Cart from "./components/Cart";
+import ProductList from "./components/ProductList";
 
 const LIMIT = 10;
 
@@ -60,55 +64,42 @@ function App() {
   }, [page,search, sort , category]);
 
   return (
-    <div>
-      <h1>Product Explorer</h1>
+    <CartProvider>
+      <Header />
+      <div style={{ display: "flex" }}>
 
-      <input
-        type="text" placeholder="Search..."
-        value={search}
-        onChange={(e) => {
-          setSearch(e.target.value)
-          setPage(1)
-        }}
-      ></input>
 
-      <select value={category} onChange={(e) => {setCategory(e.target.value) ; setPage(1)}}>
-        <option value="all"> All </option>
-        {categories && categories.map(cat =>(<option key={cat} value={cat}> {cat} </option>))}
-      </select>
+        <Cart />
+        <div>
+          <input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
 
-      <select value={sort} onChange={(e) => {
-        setSort(e.target.value)
-        setPage(1)
-      }}>
+          <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}>
+            <option value="all">All</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
 
-        <option value=""> Default </option>
-        <option value="asc"> Price Low - High</option>
-        <option value="desc"> Price High - Low </option>
+          <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}>
+            <option value="">Default</option>
+            <option value="asc">Price: Low - High</option>
+            <option value="desc">Price: High - Low</option>
+          </select>
 
-      </select>
+          <ProductList products={products} />
 
-      {products && products.map(p => (
-        <div key={p.id}>
-          <img src={p.thumbnail} alt={p.title} width="100" />
-          <h4>{p.title}</h4>
-          <p>Category : {p.category} | Price : {p.price} | Rating : {p.rating} | Stock: {p.stock}</p>
+          <button onClick={() => setPage(p => p - 1)} disabled={page === 1}>Prev</button>
+          <span> Page {page} / {totalPages} </span>
+          <button onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>Next</button>
         </div>
-      ))}
 
-      <button
-        disabled={page===1} onClick={() => setPage(p => p - 1)}
-      >
-        Prev
-      </button>
-      <span> Page : {page}/{totalPages} </span>
-      <button
-        disabled={page===totalPages} onClick={() => setPage( p => p + 1)}
-      >
-        Next
-      </button>
-    </div>
-
+      </div>
+    </CartProvider>
   );
 }
 
